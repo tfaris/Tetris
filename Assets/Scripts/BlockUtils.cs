@@ -64,4 +64,26 @@ public static class BlockUtils
         }
         return bounds;
     }
+    
+    public static bool HitTest(Transform castFrom, Vector3 direction)
+    {
+        foreach (Transform block in castFrom)
+        {
+            //Debug.Log(block.name);
+            RaycastHit[] hits = Physics.RaycastAll(
+                block.position,
+                direction,
+                1
+            );
+            foreach (var h in hits)
+            {
+                //Debug.Log(h.collider.gameObject.name);
+                if (!h.collider.gameObject.transform.IsChildOf(castFrom))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 }

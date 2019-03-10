@@ -5,21 +5,14 @@ using UnityEngine;
 public class TetronimoBehavior : MonoBehaviour
 {
     public TetrisBoard Board { get; set; }
+    public bool PieceSettled { get; set; }
 
-    void OnCollisionEnter(Collision c)
+    void Update()
     {
-        ContactPoint[] contacts = new ContactPoint[c.contactCount];
-        c.GetContacts(contacts);
-        Bounds myBounds = BlockUtils.GetBounds(gameObject),
-               otherBounds = BlockUtils.GetBounds(c.gameObject);
-
-        foreach (ContactPoint cp in contacts)
+        if (!PieceSettled && BlockUtils.HitTest(transform, Vector3.down))
         {
-            if (cp.normal == Vector3.up)
-            {
-                //Board.NextTetronimo();
-                Board.PieceLanded = true;
-            }
+            Debug.Log("HIT TEST DOWN");
+            Board.PieceLanded = true;
         }
     }
     

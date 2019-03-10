@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class TetrisBoard : MonoBehaviour
@@ -40,40 +41,46 @@ public class TetrisBoard : MonoBehaviour
         
         // min is bottom left
         Vector3 start = _boardBounds.min;
-        for (int i=0; i < width; i++)
+        for (int i=0; i < width + 2; i++)
         {
             for (int j=0; j < height; j++)
             {
-                GameObject gridPanel = new GameObject();
-                gridPanel.transform.parent = this.gameObject.transform;
-                gridPanel.transform.position = new Vector3(
-                    start.x + i +.5f,
-                    start.y + j + .5f,
-                    1
-                );
-                var meshFilter = gridPanel.AddComponent<MeshFilter>();
-                meshFilter.mesh = gridItemMesh;
-                var renderer = gridPanel.AddComponent<MeshRenderer>();
-                if ((i + j) % 2 == 0){
+                if (i == 0 || i == width + 1)
+                {
+                    GameObject boundary = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    boundary.name = "Boundary";
+                    boundary.transform.parent = this.gameObject.transform;
+                    boundary.transform.position = new Vector3(
+                        start.x + i +.5f,
+                        start.y + j + .5f,
+                        .5f
+                    );
+                    boundary.transform.localScale = new Vector3(1, 1, 2);
+                    boundary.AddComponent<BoxCollider>();
+                    var renderer = boundary.GetComponent<MeshRenderer>();
                     renderer.material = gridItemMaterial1;
                 }
-                else {
-                    renderer.material = gridItemMaterial2;
+                else
+                {
+                    GameObject gridPanel = new GameObject();
+                    gridPanel.transform.parent = this.gameObject.transform;
+                    gridPanel.transform.position = new Vector3(
+                        start.x + i +.5f,
+                        start.y + j + .5f,
+                        1
+                    );
+                    var meshFilter = gridPanel.AddComponent<MeshFilter>();
+                    meshFilter.mesh = gridItemMesh;
+                    var renderer = gridPanel.AddComponent<MeshRenderer>();
+                    if ((i + j) % 2 == 0){
+                        renderer.material = gridItemMaterial1;
+                    }
+                    else {
+                        renderer.material = gridItemMaterial2;
+                    }
                 }
             }
         }
-    }
-
-    void Nudge(GameObject tm)
-    {
-        Vector3 p = tm.transform.position;
-        Bounds b = BlockUtils.GetBounds(tm);
-        Vector3 boundsMin = b.min;
-        float nx = Mathf.Floor(boundsMin.x),
-              ny = Mathf.Floor(boundsMin.y),
-              dx = boundsMin.x - nx,
-              dy = boundsMin.y - ny;
-        tm.transform.Translate(dx, dy, 0);
     }
 
     //
@@ -85,8 +92,48 @@ public class TetrisBoard : MonoBehaviour
         _locktimePassed += Time.deltaTime;
         if (_locktimePassed >= _lockDelay)
         {
+            CheckLines();
+            // The piece is finally in its place.
+            _active.GetComponent<TetronimoBehavior>().PieceSettled = true;
             _active = null;
             _locktimePassed = 0;
+        }
+    }
+
+    void CheckLines()
+    {
+        Dictionary<float, List<Transform>> rowBlockCounts = 
+            new Dictionary<float, List<Transform>>();
+        foreach (GameObject tetronimo in onboard)
+        {
+            foreach (Transform tBlock in tetronimo.transform)
+            {
+                int row = Mathf.FloorToInt(tBlock.transform.position.y);
+                List<Transform> rowCount;
+                if (!rowBlockCounts.TryGetValue(row, out rowCount)){
+                    rowBlockCounts[row] = rowCount = new List<Transform>();
+                }
+                rowCount.Add(tBlock);
+            }
+        }
+        foreach (var kvp in rowBlockCounts)
+        {
+            if (kvp.Value.Count == width)
+            {
+                foreach (Transform t in kvp.Value)
+                {
+                    //Rigidbody rb = t.GetComponentsInParent<Rigidbody>()[0];
+                    // rb.constraints = RigidbodyConstraints.None;
+                    // rb.AddExplosionForce(
+                    //     50,
+                    //     new Vector3(0, kvp.Key, 0),
+                    //     1
+                    // );
+                    // t.parent = null;
+                    Destroy(t.gameObject);
+                }
+                // TODO: Drop blocks due to line clear.
+            }
         }
     }
 
@@ -103,6 +150,11 @@ public class TetrisBoard : MonoBehaviour
         _active.transform.Translate(-.5f - 2, -.5f + (height / 2), 0);
         onboard.Add(_active);
         _active.GetComponent<TetronimoBehavior>().Board = this;
+
+        foreach (Transform block in _active.transform)
+        {
+            block.gameObject.AddComponent<BoxCollider>();
+        }
     }
 
     void DoRotation(GameObject obj)
@@ -141,7 +193,6 @@ public class TetrisBoard : MonoBehaviour
         );
     }
 
-    // Update is called once per frame
     void Update()
     {
         _movementTimePassed += Time.deltaTime;
@@ -170,32 +221,27 @@ public class TetrisBoard : MonoBehaviour
                 }
                 if (Input.GetKey(KeyCode.RightArrow))
                 {
-                    RaycastHit hit;
-                    if (_active.GetComponent<Rigidbody>().SweepTest(Vector3.right, out hit, 1)){
-                        //
-                    }
-                    else
+                    bool hit = BlockUtils.HitTest(
+                        _active.transform, Vector3.right
+                    );
+                    if (!hit)
                     {
-                        if (ab.max.x + 1 <= _boardBounds.max.x) 
-                        {
-                            _active.transform.Translate(Vector3.right, Space.World);
-                            PieceLanded = false;
-                        }
+                        _active.transform.Translate(Vector3.right, Space.World);
+                        PieceLanded = false;
                     }
                 }
                 else if (Input.GetKey(KeyCode.LeftArrow))
                 {
-                    RaycastHit hit;
-                    if (_active.GetComponent<Rigidbody>().SweepTest(Vector3.left, out hit, 1)){
-                        //
-                    }
-                    else
+                    bool hit = BlockUtils.HitTest(
+                        _active.transform, Vector3.left
+                    );
+                    if (!hit)
                     {
-                        if (ab.min.x - 1 > _boardBounds.min.x - 1)
-                        {
-                            _active.transform.Translate(Vector3.left, Space.World);
-                            PieceLanded = false;
-                        }
+                        _active.transform.Translate(Vector3.left, Space.World);
+                        // TODO: Pieces can be moved around infinitely if they
+                        // have room to move left and right because this keeps
+                        // setting piecelanded = false
+                        PieceLanded = false;
                     }
                 }
                 
