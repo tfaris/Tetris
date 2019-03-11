@@ -9,10 +9,18 @@ public class TetronimoBehavior : MonoBehaviour
 
     void Update()
     {
-        if (!PieceSettled && BlockUtils.HitTest(transform, Vector3.down))
+        if (!PieceSettled)
         {
-            Debug.Log("HIT TEST DOWN");
-            Board.PieceLanded = true;
+            var objectDown = BlockUtils.HitTestObjectChildren(transform, Vector3.down);
+            
+            if (objectDown != null)
+            {
+                Boundary boundary = objectDown.GetComponent<Boundary>();
+                if (boundary == null || boundary.Type == Boundary.BoundaryType.Floor)
+                {
+                    Board.PieceLanded = true;
+                }
+            }
         }
     }
     

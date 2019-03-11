@@ -64,26 +64,42 @@ public static class BlockUtils
         }
         return bounds;
     }
+
+    public static RaycastHit[] HitTestAll(Transform castFrom, Vector3 direction, float distance=1)
+    {
+        return Physics.RaycastAll(
+            castFrom.position,
+            direction,
+            distance
+        );
+    }
+
+    public static bool HitTest(Transform castFrom, Vector3 direction, float distance=1)
+    {
+        RaycastHit[] hits = HitTestAll(castFrom, direction, distance: distance);
+        return hits != null && hits.Length > 0;
+    }
     
-    public static bool HitTest(Transform castFrom, Vector3 direction)
+    public static bool HitTestChildren(Transform castFrom, Vector3 direction, float distance=1)
+    {
+        return HitTestObjectChildren(castFrom, direction, distance: distance) != null;
+    }
+
+    public static GameObject HitTestObjectChildren(Transform castFrom, Vector3 direction, float distance=1)
     {
         foreach (Transform block in castFrom)
         {
             //Debug.Log(block.name);
-            RaycastHit[] hits = Physics.RaycastAll(
-                block.position,
-                direction,
-                1
-            );
+            RaycastHit[] hits = HitTestAll(block, direction, distance);
             foreach (var h in hits)
             {
                 //Debug.Log(h.collider.gameObject.name);
                 if (!h.collider.gameObject.transform.IsChildOf(castFrom))
                 {
-                    return true;
+                    return h.collider.gameObject;
                 }
             }
         }
-        return false;
+        return null;
     }
 }

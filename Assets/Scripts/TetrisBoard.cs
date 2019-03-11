@@ -1,7 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 using UnityEngine;
+
 
 public class TetrisBoard : MonoBehaviour
 {
@@ -9,15 +11,16 @@ public class TetrisBoard : MonoBehaviour
     int gridSize = 1;
     public List<GameObject> tetronimoChoices;
     List<GameObject> onboard;
+    List<GameObject> looseBlocks, floatBlocks;
     
     GameObject _active;
-    float _movementTimePassed, _inputTimePassed;
+    float _movementTimePassed, _inputTimePassed, _looseBlockPassed;
     float _movementThresh = 1f;
     float _locktimePassed = 0;
     // Number of frames before a piece is locked
     // into place.
     float _lockDelay = .5f;
-    public bool PieceLanded { get; set;}
+    public bool PieceLanded { get; set; }
     Bounds _boardBounds;
 
     public Mesh gridItemMesh;
@@ -28,6 +31,8 @@ public class TetrisBoard : MonoBehaviour
     void Start()
     {
         onboard = new List<GameObject>();
+        looseBlocks = new List<GameObject>();
+        floatBlocks = new List<GameObject>();
         
         //_boardBounds = GetComponent<Renderer>().bounds;
         _boardBounds = new Bounds(
@@ -43,11 +48,24 @@ public class TetrisBoard : MonoBehaviour
         Vector3 start = _boardBounds.min;
         for (int i=0; i < width + 2; i++)
         {
-            for (int j=0; j < height; j++)
+            for (int j=0; j < height + 2; j++)
             {
-                if (i == 0 || i == width + 1)
+                if (i == 0 || i == width + 1 || j == 0 || j == height + 1)
                 {
                     GameObject boundary = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    Boundary boundaryComp = boundary.AddComponent<Boundary>();
+                    if (j == 0)
+                    {
+                        boundaryComp.Type = Boundary.BoundaryType.Floor;
+                    }
+                    else if (j == height + 1)
+                    {
+                        boundaryComp.Type = Boundary.BoundaryType.Ceiling;
+                    }
+                    else
+                    {
+                        boundaryComp.Type = Boundary.BoundaryType.Wall;
+                    }
                     boundary.name = "Boundary";
                     boundary.transform.parent = this.gameObject.transform;
                     boundary.transform.position = new Vector3(
@@ -102,20 +120,35 @@ public class TetrisBoard : MonoBehaviour
 
     void CheckLines()
     {
+        bool cleared = false;
         Dictionary<float, List<Transform>> rowBlockCounts = 
             new Dictionary<float, List<Transform>>();
+        
+        List<Transform> allBlocks = new List<Transform>();
         foreach (GameObject tetronimo in onboard)
         {
             foreach (Transform tBlock in tetronimo.transform)
             {
-                int row = Mathf.FloorToInt(tBlock.transform.position.y);
-                List<Transform> rowCount;
-                if (!rowBlockCounts.TryGetValue(row, out rowCount)){
-                    rowBlockCounts[row] = rowCount = new List<Transform>();
-                }
-                rowCount.Add(tBlock);
+                allBlocks.Add(tBlock);
             }
         }
+        foreach (GameObject go in looseBlocks)
+        {
+            if (!allBlocks.Contains(go.transform)){
+                allBlocks.Add(go.transform);
+            }
+        }
+
+        foreach (Transform tBlock in allBlocks)
+        {
+            int row = Mathf.FloorToInt(tBlock.transform.position.y);
+            List<Transform> rowCount;
+            if (!rowBlockCounts.TryGetValue(row, out rowCount)){
+                rowBlockCounts[row] = rowCount = new List<Transform>();
+            }
+            rowCount.Add(tBlock);
+        }
+
         foreach (var kvp in rowBlockCounts)
         {
             if (kvp.Value.Count == width)
@@ -129,10 +162,40 @@ public class TetrisBoard : MonoBehaviour
                     //     new Vector3(0, kvp.Key, 0),
                     //     1
                     // );
-                    // t.parent = null;
+                    if (t.parent == null)
+                    {
+                        continue;
+                    }
+                    foreach (Transform leftoverBlock in t.parent)
+                    {
+                        if (leftoverBlock != t) {
+                            leftoverBlock.parent = null;
+                            looseBlocks.Add(leftoverBlock.gameObject);
+                        }
+                    }
+                    t.parent = null;
                     Destroy(t.gameObject);
+                    cleared = true;
                 }
-                // TODO: Drop blocks due to line clear.
+            }
+        }
+        if (cleared)
+        {
+            UpdateFloatingBlocks();
+        }
+    }
+    
+    void UpdateFloatingBlocks()
+    {
+        foreach (GameObject block in looseBlocks)
+        {
+            if (!BlockUtils.HitTest(
+                block.transform,
+                Vector3.down,
+                1
+            ))
+            {
+                floatBlocks.Add(block);
             }
         }
     }
@@ -140,7 +203,7 @@ public class TetrisBoard : MonoBehaviour
     void AddTetronimo()
     {
         PieceLanded = false;
-        GameObject prefabTmo = tetronimoChoices[Random.Range(0, tetronimoChoices.Count)];
+        GameObject prefabTmo = tetronimoChoices[UnityEngine.Random.Range(0, tetronimoChoices.Count)];
         _active = Instantiate(
             prefabTmo,
             Vector3.zero,
@@ -150,10 +213,12 @@ public class TetrisBoard : MonoBehaviour
         _active.transform.Translate(-.5f - 2, -.5f + (height / 2), 0);
         onboard.Add(_active);
         _active.GetComponent<TetronimoBehavior>().Board = this;
+        _active.name = "tmo" + UnityEngine.Random.Range(0, 500).ToString();
 
         foreach (Transform block in _active.transform)
         {
             block.gameObject.AddComponent<BoxCollider>();
+            block.name = "block" + UnityEngine.Random.Range(0, 500).ToString();
         }
     }
 
@@ -195,94 +260,120 @@ public class TetrisBoard : MonoBehaviour
 
     void Update()
     {
-        _movementTimePassed += Time.deltaTime;
-        _inputTimePassed += Time.deltaTime;
-        
-        if (PieceLanded)
+        if (floatBlocks.Count > 0)
         {
-            NextTetronimo();
-        }
-        
-        // max is top right
-        Vector3 start = _boardBounds.max;
-        if (_active == null)
-        {
-            AddTetronimo();
+            // Drop floating blocks.
+            _looseBlockPassed += Time.deltaTime;
+            if (_looseBlockPassed >= .5f)
+            {
+                for (int i=0; i < floatBlocks.Count; i++)
+                {
+                    GameObject block = floatBlocks[i];
+                    if (!BlockUtils.HitTest(block.transform, Vector3.down, 1))
+                    {
+                        block.transform.Translate(Vector3.down, Space.World);
+                    }
+                    else
+                    {
+                        i--;
+                        floatBlocks.Remove(block);
+                    }
+                }
+                UpdateFloatingBlocks();
+                _looseBlockPassed = 0;
+            }
         }
         else
         {
-            Bounds ab = BlockUtils.GetBounds(_active);
-            if (_inputTimePassed > .05f)
+            _movementTimePassed += Time.deltaTime;
+            _inputTimePassed += Time.deltaTime;
+            
+            if (PieceLanded)
             {
-                if (Input.GetKey(KeyCode.UpArrow))
-                {
-                    DoRotation(_active);
-                    PieceLanded = false;
-                }
-                if (Input.GetKey(KeyCode.RightArrow))
-                {
-                    bool hit = BlockUtils.HitTest(
-                        _active.transform, Vector3.right
-                    );
-                    if (!hit)
-                    {
-                        _active.transform.Translate(Vector3.right, Space.World);
-                        PieceLanded = false;
-                    }
-                }
-                else if (Input.GetKey(KeyCode.LeftArrow))
-                {
-                    bool hit = BlockUtils.HitTest(
-                        _active.transform, Vector3.left
-                    );
-                    if (!hit)
-                    {
-                        _active.transform.Translate(Vector3.left, Space.World);
-                        // TODO: Pieces can be moved around infinitely if they
-                        // have room to move left and right because this keeps
-                        // setting piecelanded = false
-                        PieceLanded = false;
-                    }
-                }
-                
-                if (Input.GetKey(KeyCode.DownArrow))
-                {
-                    _movementThresh = .05f;
-                }
-                else
-                {
-                    _movementThresh = 1f;
-                }
-                _inputTimePassed = 0;
+                NextTetronimo();
             }
-
-            if (_movementTimePassed >= _movementThresh)
+            
+            // max is top right
+            Vector3 start = _boardBounds.max;
+            if (_active == null)
             {
-                if (!PieceLanded)
+                AddTetronimo();
+            }
+            else
+            {
+                Bounds ab = BlockUtils.GetBounds(_active);
+                if (_inputTimePassed > .05f)
                 {
-                    // Vector3 pos = _active.transform.position;
-                    // pos.y -= 1f;
-                    // _active.transform.position = pos;
-                    _active.transform.Translate(
-                        Vector3.down,
-                        Space.World
-                    );
-
-                    Bounds activeBounds = BlockUtils.GetBounds(_active);
-                    if (activeBounds.min.y <= _boardBounds.min.y)
+                    if (Input.GetKey(KeyCode.UpArrow))
                     {
-                        // Hit the bottom of the board.
-                        //float correctionDistance = _boardBounds.min.y - activeBounds.min.y;
-                        //_active.transform.Translate(0, correctionDistance, 0);
-                        
-                        Vector3 lowestPoint = BlockUtils.GetLowestPoint(_active);
-                        float correctionDistance = _boardBounds.min.y - lowestPoint.y;
-                        _active.transform.Translate(0, correctionDistance, 0, Space.World);
-
-                        PieceLanded = true;
+                        DoRotation(_active);
+                        PieceLanded = false;
                     }
+                    if (Input.GetKey(KeyCode.RightArrow))
+                    {
+                        bool hit = BlockUtils.HitTestChildren(
+                            _active.transform, Vector3.right
+                        );
+                        if (!hit)
+                        {
+                            _active.transform.Translate(Vector3.right, Space.World);
+                            PieceLanded = false;
+                        }
+                    }
+                    else if (Input.GetKey(KeyCode.LeftArrow))
+                    {
+                        bool hit = BlockUtils.HitTestChildren(
+                            _active.transform, Vector3.left
+                        );
+                        if (!hit)
+                        {
+                            _active.transform.Translate(Vector3.left, Space.World);
+                            // TODO: Pieces can be moved around infinitely if they
+                            // have room to move left and right because this keeps
+                            // setting piecelanded = false
+                            PieceLanded = false;
+                        }
+                    }
+                    
+                    if (Input.GetKey(KeyCode.DownArrow))
+                    {
+                        _movementThresh = .05f;
+                    }
+                    else
+                    {
+                        _movementThresh = 1f;
+                    }
+                    _inputTimePassed = 0;
                 }
-                _movementTimePassed = 0;
+
+                if (_movementTimePassed >= _movementThresh)
+                {
+                    if (!PieceLanded)
+                    {
+                        // Vector3 pos = _active.transform.position;
+                        // pos.y -= 1f;
+                        // _active.transform.position = pos;
+                        _active.transform.Translate(
+                            Vector3.down,
+                            Space.World
+                        );
+
+                        Bounds activeBounds = BlockUtils.GetBounds(_active);
+                        if (activeBounds.min.y <= _boardBounds.min.y)
+                        {
+                            // Hit the bottom of the board.
+                            //float correctionDistance = _boardBounds.min.y - activeBounds.min.y;
+                            //_active.transform.Translate(0, correctionDistance, 0);
+                            
+                            Vector3 lowestPoint = BlockUtils.GetLowestPoint(_active);
+                            float correctionDistance = _boardBounds.min.y - lowestPoint.y;
+                            _active.transform.Translate(0, correctionDistance, 0, Space.World);
+
+                            PieceLanded = true;
+                        }
+                    }
+                    _movementTimePassed = 0;
+                }
             }
         }
     }
