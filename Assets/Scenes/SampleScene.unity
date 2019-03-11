@@ -162,6 +162,7 @@ MonoBehaviour:
   - {fileID: 969296167744962917, guid: 927d51b172c5c5041949f3c54014f54c, type: 3}
   - {fileID: 8298130342176769980, guid: 61768579af5f4bf45b9c3b5592edf652, type: 3}
   - {fileID: 2919838579275083450, guid: db1a1d8583ae783458392c876b62d798, type: 3}
+  - {fileID: 6528702207644086870, guid: 94bac947e883deb4591eb803fb25016f, type: 3}
   gridItemMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   gridItemMaterial1: {fileID: 2100000, guid: 4953d1f6439171e40bda6ae3bcb7da30, type: 2}
   gridItemMaterial2: {fileID: 2100000, guid: 2e944f4fe906717489bf6e88415bfe2d, type: 2}
