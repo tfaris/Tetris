@@ -12,7 +12,6 @@ public class TetronimoBehavior : MonoBehaviour
         if (!PieceSettled)
         {
             var objectDown = BlockUtils.HitTestObjectChildren(transform, Vector3.down);
-            
             if (objectDown != null)
             {
                 Boundary boundary = objectDown.GetComponent<Boundary>();
@@ -20,6 +19,14 @@ public class TetronimoBehavior : MonoBehaviour
                 {
                     Board.PieceLanded = true;
                 }
+                else
+                {
+                    Board.PieceLanded = false;
+                }
+            }
+            else
+            {
+                Board.PieceLanded = false;
             }
         }
     }

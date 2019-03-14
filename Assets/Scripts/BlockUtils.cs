@@ -77,7 +77,15 @@ public static class BlockUtils
     public static bool HitTest(Transform castFrom, Vector3 direction, float distance=1)
     {
         RaycastHit[] hits = HitTestAll(castFrom, direction, distance: distance);
-        return hits != null && hits.Length > 0;
+        int validHits = 0;
+        foreach (var h in  hits)
+        {
+            if (h.collider != castFrom)
+            {
+                validHits++;
+            }
+        }
+        return validHits > 0;
     }
     
     public static bool HitTestChildren(Transform castFrom, Vector3 direction, float distance=1)
