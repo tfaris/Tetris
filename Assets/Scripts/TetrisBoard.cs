@@ -13,7 +13,7 @@ public class TetrisBoard : MonoBehaviour
     List<Transform> allBlocks, floatBlocks;
     
     GameObject _active;
-    float _movementTimePassed, _inputTimePassed, _looseBlockPassed;
+    float _movementTimePassed, _inputTimePassed, _looseBlockPassed, _rotationTimePassed;
     float _movementThresh = 1f;
     float _locktimePassed = 0;
     // Number of frames before a piece is locked
@@ -288,6 +288,7 @@ public class TetrisBoard : MonoBehaviour
         {
             _movementTimePassed += Time.deltaTime;
             _inputTimePassed += Time.deltaTime;
+            _rotationTimePassed += Time.deltaTime;
             
             if (PieceLanded)
             {
@@ -303,12 +304,16 @@ public class TetrisBoard : MonoBehaviour
             else if (_active != null)
             {
                 Bounds ab = BlockUtils.GetBounds(_active);
-                if (_inputTimePassed > .05f)
+                if (_rotationTimePassed > .10f)
                 {
                     if (Input.GetKey(KeyCode.UpArrow))
                     {
                         DoRotation(_active);
                     }
+                    _rotationTimePassed = 0;
+                }
+                if (_inputTimePassed > .05f)
+                {
                     if (Input.GetKey(KeyCode.RightArrow))
                     {
                         bool hit = BlockUtils.HitTestChildren(
