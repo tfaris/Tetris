@@ -145,7 +145,7 @@ public class TetrisBoard : MonoBehaviour
 
         foreach (var kvp in rowBlockCounts)
         {
-            if (kvp.Value.Count == width)
+            if (kvp.Value.Count >= width)
             {
                 // Line has been filled
                 foreach (Transform t in kvp.Value)
@@ -220,30 +220,49 @@ public class TetrisBoard : MonoBehaviour
     void DoRotation(GameObject obj)
     {
         obj.transform.Rotate(Vector3.forward, -90f);
+
+        // Prevent rotation into other pieces.
+        bool rotationCollision = false;
+        foreach (Transform blockTrans in obj.transform)
+        {
+           var overlaps = Physics.OverlapBox(blockTrans.position, new Vector3(1,1,1));
+           foreach (Collider x in overlaps)
+           {
+               if (x.transform.parent != blockTrans.parent)
+               {
+                    Boundary boundary = x.GetComponent<Boundary>();
+                    if (boundary == null)
+                    {
+                        rotationCollision = true;
+                        break;
+                    }
+               }
+           }
+        }
+        
+        if (rotationCollision)
+        {
+            obj.transform.Rotate(Vector3.forward, 90f);
+        }
+        
         WallKick(obj);
-        // TODO: Prevent rotation into other pieces.
-        // RaycastHit hit;
-        // if (gameObject.GetComponent<Rigidbody>().SweepTest(Vector3.zero, out hit, 0))
-        // {
-            
-        // }
     }
 
     void WallKick(GameObject obj)
     {
         var bounds = BlockUtils.GetBounds(obj);
         float correctionX = 0, correctionY = 0;
-        if (bounds.min.x < _boardBounds.min.x)
+        if (bounds.min.x <= _boardBounds.min.x)
         {
             // Over the left edge
-            correctionX = _boardBounds.min.x - bounds.min.x;
+            correctionX = _boardBounds.min.x - bounds.min.x + 1;
         }
-        if (bounds.max.x > _boardBounds.max.x)
+        if (bounds.max.x >= _boardBounds.max.x)
         {
             // Over the right edge
             correctionX = _boardBounds.max.x - bounds.max.x;
         }
-        if (bounds.max.y > _boardBounds.max.y)
+        if (bounds.max.y >= _boardBounds.max.y)
         {
             // Over the top
             correctionY = _boardBounds.max.y - bounds.max.y;
