@@ -36,6 +36,7 @@ public class TetrisBoard : MonoBehaviour
     public Mesh gridItemMesh;
     public Material gridItemMaterial1;
     public Material gridItemMaterial2;
+    public TMPro.TextMeshPro _scoreText;
 
     // Start is called before the first frame update
     void Start()
@@ -125,11 +126,11 @@ public class TetrisBoard : MonoBehaviour
             _active = null;
             _locktimePassed = 0;
         }
+        
     }
 
     void CheckLines()
     {
-        bool cleared = false;
         Dictionary<float, List<Transform>> rowBlockCounts = 
             new Dictionary<float, List<Transform>>();
 
@@ -143,6 +144,7 @@ public class TetrisBoard : MonoBehaviour
             rowCount.Add(tBlock);
         }
 
+        int linesCleared = 0;
         foreach (var kvp in rowBlockCounts)
         {
             if (kvp.Value.Count >= width)
@@ -168,15 +170,24 @@ public class TetrisBoard : MonoBehaviour
                     }
                     allBlocks.Remove(t);
                     Destroy(t.gameObject);
-                    cleared = true;
                 }
+                linesCleared++;
             }
         }
 
-        if (cleared)
+        if (linesCleared > 0)
         {
+            Debug.Log(linesCleared + " lines cleared.");
             _lineCleared = true;
+            _score += 100 * linesCleared;
+            UpdateScore();
         }
+    }
+
+    int _score = 0;
+    void UpdateScore()
+    {
+        _scoreText.text = _score.ToString();
     }
     
     void UpdateFloatingBlocks()
@@ -239,7 +250,7 @@ public class TetrisBoard : MonoBehaviour
                }
            }
         }
-        
+
         if (rotationCollision)
         {
             obj.transform.Rotate(Vector3.forward, 90f);
@@ -382,56 +393,64 @@ public class TetrisBoard : MonoBehaviour
     
     void OnDrawGizmos()
     {
+        _boardBounds = new Bounds(
+            transform.position,
+            new Vector3(
+                width,
+                height,
+                0
+            )
+        );
         Vector3 start = _boardBounds.min;
-        for (int i=0; i < width; i++)
+        for (int i=0; i < width + 2; i++)
         {
-            for (int j=0; j < height; j++)
+            for (int j=0; j < height + 2; j++)
             {
                 Gizmos.DrawLine(
                     new Vector3(
-                        start.x + i,
-                        start.y + j,
+                        start.x + i + .5f,
+                        start.y + j + .5f,
                         0
                     ),
                     new Vector3(
-                        start.x + i + gridSize,
-                        start.y + j,
+                        start.x + i + gridSize + .5f,
+                        start.y + j + .5f,
                         0
                     )
                 );
-                Debug.DrawLine(
+                Gizmos.DrawLine(
                     new Vector3(
-                        start.x + i + gridSize,
-                        start.y + j,
+                        start.x + i + gridSize + .5f,
+                        start.y + j + .5f,
                         0
                     ),
                     new Vector3(
-                        start.x + i + gridSize,
-                        start.y + j + gridSize,
+                        start.x + i + gridSize + .5f,
+                        start.y + j + gridSize + .5f,
                         0
                     )
                 );
-                Debug.DrawLine(
+                Gizmos.DrawLine(
                     new Vector3(
-                        start.x + i + gridSize,
-                        start.y + j + gridSize,
+                        start.x + i + gridSize + .5f,
+                        start.y + j + gridSize + .5f,
                         0
                     ),
                     new Vector3(
-                        start.x + i,
-                        start.y + j + gridSize,
+                        start.x + i + .5f,
+                        start.y + j + gridSize + .5f,
                         0
                     )
                 );
-                Debug.DrawLine(
+                Gizmos.DrawLine(
                     new Vector3(
-                        start.x + i,
-                        start.y + j + gridSize,
+                        start.x + i + .5f,
+                        start.y + j + gridSize + .5f,
                         0
                     ),
                     new Vector3(
-                        start.x + i,
-                        start.y + j,
+                        start.x + i + .5f,
+                        start.y + j + .5f,
                         0
                     )
                 );
