@@ -29,6 +29,7 @@ public class TetrisBoard : MonoBehaviour
             {
                 _pieceLanded = value;
                 _locktimePassed = 0;
+                PlayLanding();
             }
         }
     }
@@ -37,6 +38,7 @@ public class TetrisBoard : MonoBehaviour
     public Material gridItemMaterial1;
     public Material gridItemMaterial2;
     public TMPro.TextMeshPro _scoreText;
+    public AudioSource _landSound;
 
     // Start is called before the first frame update
     void Start()
@@ -125,8 +127,14 @@ public class TetrisBoard : MonoBehaviour
             _active.GetComponent<TetronimoBehavior>().PieceSettled = true;
             _active = null;
             _locktimePassed = 0;
+            PlayLanding();
         }
-        
+    }
+
+    public void PlayLanding()
+    {
+        _landSound.pitch = UnityEngine.Random.Range(1f, 2f);
+        _landSound.Play();
     }
 
     void CheckLines()
@@ -308,6 +316,7 @@ public class TetrisBoard : MonoBehaviour
                     {
                         i--;
                         floatBlocks.Remove(block);
+                        PlayLanding();
                     }
                 }
                 _looseBlockPassed = 0;
