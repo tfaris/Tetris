@@ -7,9 +7,11 @@ public class TetronimoBehavior : MonoBehaviour
     public TetrisBoard Board { get; set; }
     public bool PieceSettled { get; set; }
 
+    public bool Active { get;set; }
+
     void Update()
     {
-        if (!PieceSettled)
+        if (Active && !PieceSettled)
         {
             var objectDown = BlockUtils.HitTestObjectChildren(transform, Vector3.down);
             if (objectDown != null)

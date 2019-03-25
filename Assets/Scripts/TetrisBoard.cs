@@ -12,7 +12,7 @@ public class TetrisBoard : MonoBehaviour
     public List<GameObject> tetronimoChoices;
     List<Transform> allBlocks, floatBlocks;
     
-    GameObject _active;
+    GameObject _active, _next, _nextDisplay;
     float _movementTimePassed, _inputTimePassed, _looseBlockPassed, _rotationTimePassed;
     float _movementThresh = 1f;
     float _locktimePassed = 0;
@@ -45,6 +45,7 @@ public class TetrisBoard : MonoBehaviour
     {
         allBlocks = new List<Transform>();
         floatBlocks = new List<Transform>();
+        _nextDisplay = GameObject.Find("Next");
         
         //_boardBounds = GetComponent<Renderer>().bounds;
         _boardBounds = new Bounds(
@@ -124,7 +125,9 @@ public class TetrisBoard : MonoBehaviour
         {
             CheckLines();
             // The piece is finally in its place.
-            _active.GetComponent<TetronimoBehavior>().PieceSettled = true;
+            var ttb = _active.GetComponent<TetronimoBehavior>();
+            ttb.PieceSettled = true;
+            ttb.Active = false;
             _active = null;
             _locktimePassed = 0;
             PlayLanding();
@@ -218,15 +221,37 @@ public class TetrisBoard : MonoBehaviour
     void AddTetronimo()
     {
         PieceLanded = false;
-        GameObject prefabTmo = tetronimoChoices[UnityEngine.Random.Range(0, tetronimoChoices.Count)];
-        _active = Instantiate(
-            prefabTmo,
-            Vector3.zero,
-            Quaternion.identity
+        GameObject 
+            prefabTmo = tetronimoChoices[UnityEngine.Random.Range(0, tetronimoChoices.Count)],
+            nextPrefabTmo = tetronimoChoices[UnityEngine.Random.Range(0, tetronimoChoices.Count)];
+
+        if (_next == null)
+        {
+            _active = Instantiate(
+                prefabTmo,
+                Vector3.zero,
+                Quaternion.identity
+            );
+        }
+        else
+        {
+            _active = _next;
+        }
+        
+        _next = Instantiate(
+            nextPrefabTmo,
+            _nextDisplay.transform
         );
+        _next.transform.position = _nextDisplay.transform.TransformPoint(Vector3.zero);
+
+        _active.transform.localRotation = Quaternion.identity;
         _active.transform.parent = transform;
+        _active.transform.position = this.transform.TransformPoint(Vector3.zero);
         _active.transform.Translate(-.5f - 2, -.5f + (height / 2), 0);
-        _active.GetComponent<TetronimoBehavior>().Board = this;
+
+        var ttb = _active.GetComponent<TetronimoBehavior>();
+        ttb.Board = this;
+        ttb.Active = true;
         _active.name = "tmo" + UnityEngine.Random.Range(0, 500).ToString();
         foreach (Transform block in _active.transform)
         {
@@ -291,8 +316,23 @@ public class TetrisBoard : MonoBehaviour
         );
     }
 
+    float rnext=0;
     void Update()
     {
+        if (_next != null)
+        {
+            _next.transform.localRotation = Quaternion.Euler(
+                0, 
+                Mathf.Lerp(_next.transform.localRotation.y, 360, rnext), 
+            0);
+            rnext += Time.deltaTime * .05f;
+            if (rnext >= 1)
+            {
+                rnext = 0;
+                _next.transform.localRotation = Quaternion.identity;
+            }
+        }
+
         if (_lineCleared)
         {
             UpdateFloatingBlocks();
