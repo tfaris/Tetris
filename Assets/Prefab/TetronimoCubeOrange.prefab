@@ -11,9 +11,8 @@ GameObject:
   - component: {fileID: 7820860860650826297}
   - component: {fileID: 5184883791208481393}
   - component: {fileID: 5060458868667530907}
-  - component: {fileID: 3873177422863108846}
   m_Layer: 0
-  m_Name: TetronimoCube 4
+  m_Name: TetronimoCubeOrange
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -78,15 +77,3 @@ MeshRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
---- !u!114 &3873177422863108846
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1875801763189657665}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 297bd3d5475375541b8a14cb731df7b3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
