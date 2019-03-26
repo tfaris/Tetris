@@ -8,7 +8,7 @@ using UnityEngine;
 public class TetrisBoard : MonoBehaviour
 {
     public int width, height;
-    int gridSize = 1;
+    int gridSize = 1, _score = 0;
     public List<GameObject> tetronimoChoices;
     List<Transform> allBlocks, floatBlocks;
     
@@ -19,7 +19,7 @@ public class TetrisBoard : MonoBehaviour
     // Number of frames before a piece is locked
     // into place.
     float _lockDelay = .5f;
-    bool _pieceLanded, _lineCleared;
+    bool _pieceLanded, _lineCleared, _topOut;
     public bool PieceLanded 
     { 
         get => _pieceLanded;
@@ -195,7 +195,7 @@ public class TetrisBoard : MonoBehaviour
         }
     }
 
-    int _score = 0;
+    
     void UpdateScore()
     {
         _scoreText.text = _score.ToString();
@@ -242,12 +242,10 @@ public class TetrisBoard : MonoBehaviour
             nextPrefabTmo,
             _nextDisplay.transform
         );
-        _next.transform.position = _nextDisplay.transform.TransformPoint(Vector3.zero);
+        _next.transform.localPosition = Vector3.zero;
 
         _active.transform.localRotation = Quaternion.identity;
         _active.transform.parent = transform;
-        _active.transform.position = this.transform.TransformPoint(Vector3.zero);
-        _active.transform.Translate(-.5f - 2, -.5f + (height / 2), 0);
 
         var ttb = _active.GetComponent<TetronimoBehavior>();
         ttb.Board = this;
@@ -258,6 +256,30 @@ public class TetrisBoard : MonoBehaviour
             block.gameObject.AddComponent<BoxCollider>();
             block.name = "block" + (++blockCounter);
             allBlocks.Add(block);
+        }
+
+        _active.transform.localPosition = Vector3.zero;
+        _active.transform.Translate(-.5f, -.5f + (height / 2), 0);
+
+        // Manual collision test since raycast doesn't seem to work on same position.
+        foreach (Transform activeBlock in _active.transform)
+        {
+            foreach (Transform otherBlock in allBlocks)
+            {
+                if (!otherBlock.transform.IsChildOf(_active.transform))
+                {
+                    float dist = Vector3.Distance(activeBlock.transform.position, otherBlock.transform.position);
+                    if (dist == 0)
+                    {
+                        _topOut = true;
+                        break;
+                    }
+                }
+            }
+            if (_topOut)
+            {
+                break;
+            }
         }
     }
 
@@ -319,6 +341,12 @@ public class TetrisBoard : MonoBehaviour
     float rnext=0;
     void Update()
     {
+        if (_topOut)
+        {
+            GameOver();
+            return;
+        }
+
         if (_next != null)
         {
             _next.transform.localRotation = Quaternion.Euler(
@@ -440,6 +468,31 @@ public class TetrisBoard : MonoBehaviour
         }
     }
     
+    void GameOver()
+    {
+        print("Gameover. Score: " + _score);
+        Destroy(_active);
+        Destroy(_next);
+        _active = null;
+        _next = null;
+        _topOut = false;
+        _score = 0;
+        foreach (Transform block in allBlocks)
+        {
+            Destroy(block.gameObject);
+        }
+        foreach (Transform block in floatBlocks)
+        {
+            Destroy(block.gameObject);
+        }
+        allBlocks.Clear();
+        floatBlocks.Clear();
+        _lineCleared = false;
+        _pieceLanded = false;
+
+        UpdateScore();
+    }
+    
     void OnDrawGizmos()
     {
         _boardBounds = new Bounds(
@@ -457,49 +510,49 @@ public class TetrisBoard : MonoBehaviour
             {
                 Gizmos.DrawLine(
                     new Vector3(
-                        start.x + i + .5f,
-                        start.y + j + .5f,
+                        start.x + i ,
+                        start.y + j ,
                         0
                     ),
                     new Vector3(
-                        start.x + i + gridSize + .5f,
-                        start.y + j + .5f,
+                        start.x + i + gridSize,
+                        start.y + j ,
                         0
                     )
                 );
                 Gizmos.DrawLine(
                     new Vector3(
-                        start.x + i + gridSize + .5f,
-                        start.y + j + .5f,
+                        start.x + i + gridSize ,
+                        start.y + j ,
                         0
                     ),
                     new Vector3(
-                        start.x + i + gridSize + .5f,
-                        start.y + j + gridSize + .5f,
+                        start.x + i + gridSize,
+                        start.y + j + gridSize,
                         0
                     )
                 );
                 Gizmos.DrawLine(
                     new Vector3(
-                        start.x + i + gridSize + .5f,
-                        start.y + j + gridSize + .5f,
+                        start.x + i + gridSize,
+                        start.y + j + gridSize,
                         0
                     ),
                     new Vector3(
-                        start.x + i + .5f,
-                        start.y + j + gridSize + .5f,
+                        start.x + i,
+                        start.y + j + gridSize,
                         0
                     )
                 );
                 Gizmos.DrawLine(
                     new Vector3(
-                        start.x + i + .5f,
-                        start.y + j + gridSize + .5f,
+                        start.x + i,
+                        start.y + j + gridSize,
                         0
                     ),
                     new Vector3(
-                        start.x + i + .5f,
-                        start.y + j + .5f,
+                        start.x + i,
+                        start.y + j,
                         0
                     )
                 );
