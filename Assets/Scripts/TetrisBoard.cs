@@ -38,7 +38,7 @@ public class TetrisBoard : MonoBehaviour
     public Material gridItemMaterial1;
     public Material gridItemMaterial2;
     public TMPro.TextMeshPro _scoreText;
-    public AudioSource _landSound;
+    public AudioSource _landSound, _music;
 
     // Start is called before the first frame update
     void Start()
@@ -338,7 +338,7 @@ public class TetrisBoard : MonoBehaviour
         );
     }
 
-    float rnext=0;
+    float rnext = 0, _fearChange = 0;
     void Update()
     {
         if (_topOut)
@@ -346,6 +346,25 @@ public class TetrisBoard : MonoBehaviour
             GameOver();
             return;
         }
+
+        float highestY = float.MinValue;
+        foreach (Transform block in allBlocks)
+        {
+            if (block != null && 
+                block.transform != null &&
+                (_active == null || (_active != null &&!block.transform.IsChildOf(_active.transform))))
+            {
+                highestY = Mathf.Max(highestY, block.transform.position.y + .5f);
+            }
+        }
+
+        float fearRatio = Mathf.Max(0,
+            Mathf.Clamp(
+                (highestY - _boardBounds.min.y) / (_boardBounds.extents.y * 2),
+                0,
+                1) - .5f);
+        _music.pitch = Mathf.Lerp(_music.pitch, 1 + fearRatio, _fearChange);
+        _fearChange = Mathf.Clamp(_fearChange + Time.deltaTime * .0005f, 0, 1);
 
         if (_next != null)
         {

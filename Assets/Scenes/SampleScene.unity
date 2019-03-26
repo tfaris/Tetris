@@ -308,6 +308,7 @@ MonoBehaviour:
   gridItemMaterial2: {fileID: 2100000, guid: 2e944f4fe906717489bf6e88415bfe2d, type: 2}
   _scoreText: {fileID: 1831801692}
   _landSound: {fileID: 605494336}
+  _music: {fileID: 1905922696}
 --- !u!4 &110287095 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 400000, guid: 88af040b738acb749aab2fd82ce85acf,
@@ -1263,7 +1264,7 @@ GameObject:
   - component: {fileID: 1905922697}
   - component: {fileID: 1905922696}
   m_Layer: 0
-  m_Name: Sound
+  m_Name: Music
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
